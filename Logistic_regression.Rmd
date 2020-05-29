@@ -1,0 +1,230 @@
+---
+title: "Classification_methods"
+author: "Biswajit Chowdhury"
+date: "28/05/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load the required library 
+
+```{r}
+library(tidyverse) # Data manipulation and visualization
+library (caret)   # Machine learning workflow
+library(klaR)   # Naive Bayes classifier
+library(MASS) # Discriminant analysis
+theme_set(theme_bw())
+```
+
+# Load the data and visualize the summary of the dataset
+
+```{r}
+heart_data<-read.csv("heart.csv")
+# to add the colonm names in the dataset
+names(heart_data) <- c("age", "sex", "chest_pain", "resting_bp","cholestrol", 
+                       "fasting_sugar", "resting_ECG", "max_heart_rate", "exercise_agina",
+                       "oldpeak", "slope", "number_major_vessels", "thal", "target")
+
+# visualize the sumary of the dataset
+head(heart_data,3)
+str(heart_data)
+
+```
+
+# Relationship between the variables and distribution of quantitative variables
+
+```{r}
+
+library(corrplot)
+my_data <- heart_data
+
+corrplot(cor(my_data), type="upper")
+
+# Create a scatter plot matrix and density curve for quantitatve variables
+library(GGally)
+library(ggplot2)
+
+ggpairs(my_data[, c(1, 4, 5, 8, 10)])
+
+```
+
+Positive correlations are displayed in blue and negative correlations in red color. The scale for correlationa color intensity are spread from -1 to 1 at the right. Color intensity and the size of the circle are proportional to the correlation coefficients.
+
+
+# Changed a few predictor variables from integer to factors for regression analysis 
+
+```{r}
+my_data[, 2]<-factor(my_data[, 2])
+my_data[, 3]<-factor(my_data[, 3])
+my_data[, 6]<-factor(my_data[, 6])
+my_data[, 7]<-factor(my_data[, 7])
+my_data[, 9]<-factor(my_data[, 9])
+my_data[, 11]<-factor(my_data[, 11])
+my_data[, 12]<-factor(my_data[, 12])
+my_data[, 13]<-factor(my_data[, 13])
+my_data[, 14]<-factor(my_data[, 14])
+
+# Check the new format of predictor variables
+str(my_data)
+```
+
+# Visualize the missing value 
+```{r}
+library(Amelia)
+missmap(my_data)
+
+
+```
+There is no missing values
+
+# Split the data set for the machine learning algorithms 
+
+
+```{r}
+set.seed(123)
+
+training_samples<- my_data$target%>%
+        createDataPartition(p=0.7, list = FALSE)
+train_data<-my_data[training_samples, ]
+test_data<- my_data[-training_samples, ]
+```
+
+
+# 1. Logistic regression model (LGM)
+
+```{r}
+set.seed(123)
+# Fit the model
+model <- glm(target ~., data = train_data, family = binomial)
+
+# Summarize the final output of the model
+summary(model)
+```
+
+```{r}
+# Calculate the model predictions and accuracy
+probabilities <- model %>% predict(test_data, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, "0", "1")
+
+# Model accuracy
+accuracy_LR<- mean(predicted.classes==test_data$target)
+
+accuracy_LR
+
+```
+
+As we can see from the above output that all the variables are not significantly associated with the outcome variables. So we should taken out the non siginificant variables and run the algorithm to make the best model 
+
+```{r}
+
+# Fit the model
+model <- glm(target ~ sex + chest_pain + cholestrol+ number_major_vessels, data = train_data, family = binomial) 
+# Summarize the final output of the model
+summary(model)
+
+
+# Calculate the model predictions and accuracy
+probabilities <- model %>% predict(test_data, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, "0", "1")
+# Model accuracy
+accuracy_LR<- mean(predicted.classes==test_data$target)
+
+accuracy_LR
+
+```
+
+The accuracy of the model has been improved from the global methods (from 14% to 20%). However this is not the best predition model. We should try other methods
+
+# 2. Stepwise logistic regression  (SLR)
+ This method autometically removes nonsignificant preditable variables for building the best regression model. 
+
+```{r}
+
+library(MASS)
+# Fit the model
+model_SLR <- glm(target ~., data = train_data, family = binomial) %>%
+  stepAIC(direction = "both", trace = FALSE)
+
+# Summarize the final output of the model
+summary(model_SLR)
+
+# Calculate the model predictions and accuracy
+probabilities <- model_SLR %>% predict(test_data, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, "0", "1")
+# Model accuracy
+accuracy_SLR<- mean(predicted.classes==test_data$target)
+
+accuracy_SLR
+
+
+```
+
+# 3. Support Vector Machine (SVM) Model
+Support vector machine methods can handle both linear and non-linear class boundaries. Prior building the model, variables are normalized to It standardized the variables to make can be used for both two-class and multi-class classification problems.
+
+```{r}
+
+# Variables are normalized to make their scale comparable. This is automatically done before building the SVM classifier by setting the option preProcess = c("center","scale")
+
+set.seed(123)
+model_SVM<- train(
+  target~., data = train_data, method="svmRadial",
+  trControl=trainControl("cv", number=10), 
+  
+  preProcess = c("center", "scale"),
+  
+  tuneLength=10
+  )
+# Summarize the final output of the model
+summary (model_SVM)
+
+# Calculate the model predictions and accuracy
+
+predicted_classes<- model_SVM%>% predict(test_data)
+
+observed_classes<- test_data$target
+
+# compute the accuracy rate
+accuracy_SVM<- mean(predicted_classes==test_data$target)
+accuracy_SVM
+
+# model performance test - Confusion matrix
+table(observed_classes, predicted_classes)
+
+```
+
+# Quadratic discriminant analysis (QDA)
+
+```{r}
+
+model_QDA <- qda(target~., data = train_data)
+model
+
+# Compute the predictions and model accuracy
+predicted_classes <- model_QDA %>% predict(test_data)
+
+
+# Model accuracy
+accuracy_QDA<- mean(predicted_classes$class == test_data$target)
+accuracy_QDA
+
+
+```
+
+
+# Comparison of Model Accuracy 
+
+```{r}
+
+accuracy <- data.frame(Model=c("GLM", "Stepwise", "SVM", "QDA"), 
+  Accuracy=c(accuracy_LR, accuracy_SLR, accuracy_SVM, accuracy_QDA))
+
+ggplot(accuracy,aes(x=Model,y=Accuracy, fill=Model)) + geom_bar(stat='identity') +
+  ggtitle('Comparison of Model Accuracy')
+
+```
+
+Based on the above prediction models, SVM has the higisest prediction accuarcy rate (86%) compare to rest. Therefore SVM model is highly appropriate for this dataset. 
