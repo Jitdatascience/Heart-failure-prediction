@@ -1,0 +1,339 @@
+---
+title: "Exploratory_HF"
+author: "Biswajit Chowdhury"
+date: "25/08/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Load the required library 
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+theme_set(theme_pubr())
+theme_set(theme_bw())
+```
+
+# 2. load the dataset and overall summary
+```{r}
+heart_data<-read.csv("heart.csv")
+names(heart_data) <- c("age", "sex", "chest_pain", "resting_bp","cholestrol",
+                       "fasting_sugar", "resting_ECG", "max_heart_rate", 
+                       "exercise_agina", "oldpeak", "slope", "number_major_vessels",
+                       "thal", "target")
+
+head(heart_data,3)
+dim(heart_data)
+str(heart_data)
+
+summary(heart_data)
+```
+
+# 3. Preprocessing the data for exploratory analysis
+```{r}
+# variable sex is coded 0 and 1
+# we want to attach value labels 0=F, 1=M
+
+heart_data$target <- factor(heart_data$target,
+      levels = c(0,1),
+      labels = c("Normal", "Heart Disease"))
+
+heart_data$sex <- factor(heart_data$sex,
+      levels = c(0,1),
+      labels = c("F", "M"))
+
+heart_data$slope <- factor(heart_data$slope,
+      levels = c(1,2,3),
+      labels = c("Upsloping", "Flat", "Douwnsloping"))
+
+heart_data$chest_pain <- factor(heart_data$chest_pain,
+      levels = c(1,2,3, 0),
+      labels = c("Typical angina ", "Atypical angina ", "Non-anginal pain ", "Asymptomatic"))
+
+heart_data$fasting_sugar <- factor(heart_data$fasting_sugar,
+      levels = c(0,1),
+      labels = c("False", "TRUE"))
+
+heart_data$resting_ECG <- factor(heart_data$resting_ECG,
+      levels = c(0,1, 2),
+      labels = c("Normal", "Mild", "Severe"))
+
+heart_data$exercise_agina <- factor(heart_data$exercise_agina,
+      levels = c(0,1),
+      labels = c("No", "Yes"))
+
+heart_data$number_major_vessels <- factor(heart_data$number_major_vessels,
+      levels = c(0,1, 2, 3, 4),
+      labels = c("None", "One", "Two", "Three", "Four"))
+
+heart_data$thal <- factor(heart_data$thal,
+      levels = c(1,2,3),
+      labels = c("Normal", "Fixed defect", "Reversable defect"))
+
+
+```
+
+# 4. Explore the qunatitative vriables
+
+```{r}
+# Presence of heart disease among males and females due to age  
+
+ggboxplot(heart_data, x = "target", y = "age", 
+          xlab = "Presence of heart disease", ylab = "Age (years)", 
+          title = "Heart disease with age", # title of the graph
+          color = "sex", # color by gender
+          add = c("jitter", "mean_sd"))+ # show the distribution of the values
+          theme(plot.title = element_text(hjust = 0.5))
+```
+
+Adult females are more prone to get heart disease compared with men.
+
+```{r}
+# Presence of heart disease among males and females due to resting blood pressue  
+
+ggboxplot(heart_data, x = "target", y = "resting_bp", 
+          xlab = "Presence of heart disease", ylab = "Resting blood pressue (mm Hg)", 
+          title = "Resting blood pressue and heart disease",
+          color = "sex", add = c("jitter", "mean_sd")) +
+          theme(plot.title = element_text(hjust = 0.5))
+```
+
+Men and women with heart disease had almost same resting blood pressure.
+
+```{r}
+# Changes of chlestreol level between heart disease and normal people  
+
+ggboxplot(heart_data, x = "target", y = "cholestrol", 
+          xlab = "Presence of heart disease", ylab = "Cholestoral level (mg/dl)",
+          title = "Relationship between heart disease and serum cholestoral",
+          color = "sex", add = c("jitter", "mean_sd")) +
+          theme(plot.title = element_text(hjust = 0.5))
+```
+
+No change in cholestreol level between normal and heart disease.
+
+```{r}
+# Chnages of heart rate between normal and disease 
+
+ggboxplot(heart_data, x = "target", y = "max_heart_rate", 
+          xlab = "Presence of heart disease", ylab = "Heart rate", 
+          title = "Relationship between heart disease and heart rate",
+          color = "sex", add = c("jitter", "mean_sd")) +
+          theme(plot.title = element_text(hjust = 0.5))
+```
+
+Men with heart disease had increased heart rate.
+
+```{r}
+# Changes of old peak among the peopple with heart disease and healthy  
+
+ggboxplot(heart_data, x = "target", y = "oldpeak", 
+          xlab = "Presence of heart disease", ylab = "ST wave", 
+          title = "Relationship between heart disease and ST wave",
+          color = "sex", add = c("jitter", "mean_sd")) +
+          theme(plot.title = element_text(hjust = 0.5))
+```
+
+Presence of reduced ST wave in people with heart disease.
+
+# 5. Explore the Categorical vriables
+ 
+## Calculate the frequency of categorical variables
+
+```{r}
+# Counts for gender categories
+table(heart_data$sex)
+
+
+# Cross classification counts for gender by heart failure
+
+table(heart_data$target, heart_data$sex)
+```
+
+
+## Assess the count of people by heart disease, gender, and fasting sugar
+```{r}
+# Multidimensional tables based on three or more categorical variables. 
+
+table1 <- table(heart_data$target, heart_data$sex, 
+                 heart_data$fasting_sugar)
+
+ftable(table1) # print the results more attractively
+
+```
+
+## Assess the count of people by heart failure, gender, chest pain
+
+```{r}
+table1 <- table(heart_data$target, heart_data$sex, 
+                 heart_data$chest_pain)
+
+ftable(table1)
+
+```
+
+## Assess the count of people by heart disease, gender, and resting ECG
+
+```{r}
+table1 <- table(heart_data$target, heart_data$sex, 
+                 heart_data$resting_ECG)
+
+ftable(table1)
+
+```
+
+## Assess the count of people by heart disease, gender, exercise agina, and resting ECG
+
+```{r}
+table1 <- table(heart_data$target, heart_data$sex, 
+                 heart_data$exercise_agina, heart_data$resting_ECG)
+
+ftable(table1)
+
+```
+
+
+## Visualize the categorical variables
+
+```{r}
+
+# Here we can assess the number of people diagnosed with chest pain
+ggplot(heart_data, aes(x = chest_pain, fill=chest_pain)) +
+        geom_bar() +  xlab('Level of chest pain') + ylab("Count") 
+```
+
+To make it easy to understand, we can make it in desending order. For this we will make a functions that sort the variables crosponding their total counts
+
+```{r}
+# re-order levels
+reorder_size <- function(x) {
+        factor(x, levels = names(sort(table(x), decreasing = TRUE)))
+}
+
+ggplot(heart_data, aes(x = reorder_size(chest_pain), fill=chest_pain)) +
+        geom_bar() +
+  xlab('Level of chest pain') + ylab("Count") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### Changes of chest pain with sex and heart disease
+
+```{r}
+
+ggplot(heart_data, aes(x = reorder_size(chest_pain), fill=chest_pain)) +
+        geom_bar() +
+  xlab('Level of chest pain') +
+  facet_grid(target~ sex) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Number of major vessels with gender and heart disease
+
+```{r}
+
+ggplot(heart_data, aes(x = reorder_size(number_major_vessels), fill=number_major_vessels)) +
+        geom_bar() +
+  xlab('Number of major vessels') +
+  facet_grid(target~ sex) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+### The slope of the peak exercise of ST segment with gender and heart disease
+
+```{r}
+
+ggplot(heart_data, aes(x = reorder_size(slope), fill=slope)) +
+        geom_bar() +
+  xlab('The slope of the peak exercise ST segment') + ylab(" Count")+
+  facet_grid(target~ sex) + 
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### Changes of thal with sex and heart disease
+
+```{r}
+
+ggplot(heart_data, aes(x = reorder_size(thal), fill=thal)) +
+        geom_bar() +
+  xlab('Type of thal') + ylab(" Count")+
+  facet_grid(target~ sex) + 
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+# 6. Proportion/Percentage
+To do this we simply use the frequency tables produced by table() to the prop.table() function
+
+
+```{r}
+
+# percentages of gender categories
+table1<- table(heart_data$sex)
+prop.table(table1)
+
+# percentage of cross classication counts for gender by heart disease
+
+table2<- table(heart_data$target, heart_data$sex)
+prop.table(table2)
+
+round(prop.table(table2), 3)*100
+
+#percentage of heart failure by sex, and fasting sugar
+table1 <- table(heart_data$target, heart_data$sex, 
+                 heart_data$fasting_sugar)
+
+ftable(round(prop.table(table1), 3)*100)
+
+```
+
+## Visualize the data 
+```{r}
+
+ggplot(heart_data, aes(x = reorder_size(chest_pain), fill=chest_pain)) +
+        geom_bar(aes(y = (..count..)/sum(..count..))) +
+  xlab('Level of chest pain') + ylab("Count") +
+  
+  scale_y_continuous(labels = scales::percent, name = "Percentage") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+# Chest pain with only one variable heart disease
+ggplot(heart_data, aes(x = reorder_size(chest_pain), fill=chest_pain)) +
+        geom_bar(aes(y = (..count..)/sum(..count..))) +
+  xlab('Level of chest pain') + ylab("Count") +
+  scale_y_continuous(labels = scales::percent, name = "Percentage") +
+  facet_grid(~ sex) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# chest pain with multiple valriables sex and heart disease
+
+ggplot(heart_data, aes(x = reorder_size(chest_pain), fill=chest_pain)) +
+        geom_bar(aes(y = (..count..)/sum(..count..))) +
+  xlab('Level of chest pain') +
+  scale_y_continuous(labels = scales::percent, name = "Percentage") +
+  facet_grid(target~ sex) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+
+
+
+
+
+
+
+
